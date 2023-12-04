@@ -15,8 +15,8 @@ db_cursor = db_connection.cursor()
 
 def get_passenger_info():
     try:
-        print("Enter passenger information:")
-        name = input("Name: ")
+        print("승객 정보 입력:")
+        name = input("이름: ")
 
         # Passenger 테이블에 삽입
         insert_passenger_query = """
@@ -25,19 +25,19 @@ def get_passenger_info():
         db_cursor.execute(insert_passenger_query, (name,))
         db_connection.commit()
 
-        print("Passenger information saved.")
+        print("승객 정보가 저장되었습니다.")
         return db_cursor.lastrowid   # 자동 증가하는 PassengerID 반환
 
     except Exception as e:
         db_connection.rollback()
-        print(f"Error during passenger information entry: {e}")
+        print(f"승객 정보 입력 중 오류 발생: {e}")
         return None
 
 def get_route_info():
     try:
-        print("\nEnter route information:")
-        start = input("Starting station: ")
-        end = input("Destination station: ")
+        print("\n경로 정보 입력:")
+        start = input("출발역: ")
+        end = input("도착역: ")
 
         # 사용 가능한 노선을 얻기 위한 쿼리
         get_routes_query = """
@@ -49,24 +49,24 @@ def get_route_info():
         routes = db_cursor.fetchall()
 
         if not routes:
-            print("No available routes found.")
+            print("사용 가능한 경로를 찾을 수 없음.")
             return None
 
-        print("\nAvailable routes:")
+        print("\n사용 가능한 경로:")
         for route in routes:
             print(route[0])
 
-        route_id = int(input("Choose a route (enter RouteID): "))
+        route_id = int(input("경로 선택(RouteID 입력): "))
         return route_id
 
     except Exception as e:
-        print(f"Error during route information entry: {e}")
+        print(f"경로 정보 입력 중 오류 발생: {e}")
         return None
 
 def get_train_info(route_id):
     try:
-        print("\nEnter travel time information:")
-        date_str = input("Travel date (YYYY-MM-DD): ")
+        print("\n이동 시간 정보 입력:")
+        date_str = input("이동 날짜 (YYYY-MM-DD): ")
         travel_date = datetime.strptime(date_str, "%Y-%m-%d").date()
 
         # 선택한 경로 및 날짜에 대해 사용 가능한 열차를 가져오려는 쿼리
@@ -87,23 +87,23 @@ def get_train_info(route_id):
         trains = db_cursor.fetchall()
 
         if not trains:
-            print("No available trains found.")
+            print("이용 가능한 열차를 찾을 수 없습니다.")
             return None
 
-        print("\nAvailable trains:")
+        print("\n이용 가능한 열차:")
         for train in trains:
             print(f"TrainID: {train[0]}, Departure: {train[1]}, Arrival: {train[2]}")
 
-        train_id = int(input("Choose a train (enter TrainID): "))
+        train_id = int(input("열차 선택(TrainID 입력): "))
         return train_id
 
     except Exception as e:
-        print(f"Error during train information entry: {e}")
+        print(f"열차 정보 입력 중 오류 발생: {e}")
         return None
 
 def get_seat_info(train_id, travel_date):
     try:
-        print("\nEnter seat information:")
+        print("\n좌석 정보 입력:")
 
         # 선택한 열차 및 날짜에 사용 가능한 좌석을 확보하기 위한 쿼리
         get_seats_query = """
@@ -119,24 +119,24 @@ def get_seat_info(train_id, travel_date):
         seats = db_cursor.fetchall()
 
         if not seats:
-            print("No available seats found.")
+            print("사용 가능한 좌석을 찾을 수 없습니다.")
             return None
 
-        print("\nAvailable seats:")
+        print("\n사용 가능한 좌석:")
         for seat in seats:
             print(f"CarriageNum: {seat[0]}, SeatNum: {seat[1]}")
 
-        carriage_num = int(input("Choose a carriage (enter CarriageNum): "))
-        seat_num = int(input("Choose a seat (enter SeatNum): "))
+        carriage_num = int(input("캐리지 선택(CarriageNum 입력): "))
+        seat_num = int(input("좌석 선택(SeatNum 입력): "))
         return carriage_num, seat_num
     except Exception as e:
-        print(f"Error during seat information entry: {e}")
+        print(f"좌석 정보 입력 중 오류 발생: {e}")
         return None, None
 
 
 def get_service_info():
     try:
-        print("\nEnter service information:")
+        print("\n서비스 정보 입력:")
 
         # 사용 가능한 서비스를 가져오려는 쿼리
         get_services_query = """
@@ -147,25 +147,25 @@ def get_service_info():
         services = db_cursor.fetchall()
 
         if not services:
-            print("No available services found.")
+            print("사용 가능한 서비스를 찾을 수 없습니다.")
             return None
 
-        print("\nAvailable services:")
+        print("\n사용 가능한 서비스:")
         for service in services:
             print(f"ServiceID: {service[0]}, Type: {service[1]}, Cost: {service[2]}")
 
-        service_id = int(input("Choose a service (enter ServiceID) or enter 0 to skip: "))
+        service_id = int(input("서비스(ServiceID 입력)를 선택하거나 0을 입력하여 건너뜁니다: "))
         return service_id
     except Exception as e:
-        print(f"Error during service information entry: {e}")
+        print(f"서비스 정보 입력 중 오류 발생: {e}")
         return None
 
 def get_feedback_info():
     try:
-        print("\nEnter feedback information:")
-        name = input("Your Name: ")
-        feedback_contents = input("Feedback contents: ")
-        date_str = input("Date (YYYY-MM-DD HH:mm:ss): ")
+        print("\n피드백 정보 입력:")
+        name = input("이름: ")
+        feedback_contents = input("피드백 내용: ")
+        date_str = input("날짜 (YYYY-MM-DD HH:mm:ss): ")
         feedback_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
 
         # 피드백을 위해 이용 가능한 열차 받기
@@ -177,14 +177,14 @@ def get_feedback_info():
         trains = db_cursor.fetchall()
 
         if not trains:
-            print("No available trains found.")
+            print("이용 가능한 열차를 찾을 수 없습니다.")
             return None
 
-        print("\nAvailable trains for feedback:")
+        print("\n피드백 가능한 열차:")
         for train in trains:
             print(train[0])
 
-        train_id = int(input("Choose a train (enter TrainID): "))
+        train_id = int(input("열차 선택(TrainID 입력): "))
 
         # 피드백 테이블에 삽입
         insert_feedback_query = """
@@ -193,12 +193,12 @@ def get_feedback_info():
         db_cursor.execute(insert_feedback_query, ("", name, feedback_date, feedback_contents, train_id))
         db_connection.commit()
 
-        print("Feedback information saved.")
+        print("피드백 정보가 저장되었습니다.")
         return db_cursor.lastrowid
 
     except Exception as e:
         db_connection.rollback()
-        print(f"Error during feedback information entry: {e}")
+        print(f"피드백 정보 입력 중 오류 발생: {e}")
         return None
 
 def get_fare_amount(fare_id):
@@ -302,15 +302,15 @@ def complete_refund(payment_id):
         db_cursor.execute(insert_refund_query, refund_values)
         db_connection.commit()
 
-        print(f"Refund successful. PaymentID: {payment_id}")
+        print(f"환불완료.결제ID: {payment_id}")
 
     except Exception as e:
         db_connection.rollback()
-        print(f"Error during refund: {e}")
+        print(f"환불중 오류 발생: {e}")
 
 
 try:
-    passenger_id = int(input("Enter PassengerID: "))
+    passenger_id = int(input("승객 ID 입력: "))
 
     get_passenger_info()
     route_id = get_route_info()
@@ -319,7 +319,7 @@ try:
         train_id = get_train_info(route_id)
 
         if train_id is not None:
-            date_str = input("Enter travel date (YYYY-MM-DD): ")
+            date_str = input("이동 일자 입력 (YYYY-MM-DD): ")
             travel_date = datetime.strptime(date_str, "%Y-%m-%d").date()
 
             carriage_num, seat_num = get_seat_info(train_id, travel_date)
@@ -335,9 +335,9 @@ try:
                                  service_id)
 
                     # 사용자에게 환불 요청 메시지가 표시됨
-                    refund_choice = input("Do you want to request a refund? (y/n): ").lower()
+                    refund_choice = input("환불을 요청하시겠습니까? (y/n): ").lower()
                     if refund_choice == 'y':
-                        payment_id = int(input("Enter PaymentID to refund: "))
+                        payment_id = int(input("환불할 PaymentID 입력: "))
                         complete_refund(payment_id)
 
 except Exception as e:
