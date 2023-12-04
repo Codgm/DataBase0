@@ -18,7 +18,7 @@ def get_passenger_info():
         print("Enter passenger information:")
         name = input("Name: ")
 
-        # Insert into Passenger table
+        # Passenger 테이블에 삽입
         insert_passenger_query = """
         INSERT INTO Passenger (Name) VALUES (%s)
         """
@@ -26,7 +26,7 @@ def get_passenger_info():
         db_connection.commit()
 
         print("Passenger information saved.")
-        return db_cursor.lastrowid  # Return the auto-incremented PassengerID
+        return db_cursor.lastrowid   # 자동 증가하는 PassengerID 반환
 
     except Exception as e:
         db_connection.rollback()
@@ -39,7 +39,7 @@ def get_route_info():
         start = input("Starting station: ")
         end = input("Destination station: ")
 
-        # Query to get available routes
+        # 사용 가능한 노선을 얻기 위한 쿼리
         get_routes_query = """
         SELECT RouteID
         FROM DetailedRoute
@@ -69,7 +69,7 @@ def get_train_info(route_id):
         date_str = input("Travel date (YYYY-MM-DD): ")
         travel_date = datetime.strptime(date_str, "%Y-%m-%d").date()
 
-        # Query to get available trains for the selected route and date
+        # 선택한 경로 및 날짜에 대해 사용 가능한 열차를 가져오려는 쿼리
         get_trains_query = """
         SELECT train_id, departure_time, arrival_time
         FROM Timetable
@@ -105,7 +105,7 @@ def get_seat_info(train_id, travel_date):
     try:
         print("\nEnter seat information:")
 
-        # Query to get available seats for the selected train and date
+        # 선택한 열차 및 날짜에 사용 가능한 좌석을 확보하기 위한 쿼리
         get_seats_query = """
         SELECT CarriageNum, SeatNum
         FROM Seat
@@ -138,7 +138,7 @@ def get_service_info():
     try:
         print("\nEnter service information:")
 
-        # Query to get available services
+        # 사용 가능한 서비스를 가져오려는 쿼리
         get_services_query = """
         SELECT ServiceID, Service_type, Service_cost
         FROM Service_Type
@@ -168,7 +168,7 @@ def get_feedback_info():
         date_str = input("Date (YYYY-MM-DD HH:mm:ss): ")
         feedback_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
 
-        # Get available trains for feedback
+        # 피드백을 위해 이용 가능한 열차 받기
         get_trains_query = """
         SELECT TrainID
         FROM Train
@@ -186,7 +186,7 @@ def get_feedback_info():
 
         train_id = int(input("Choose a train (enter TrainID): "))
 
-        # Insert into feedback table
+        # 피드백 테이블에 삽입
         insert_feedback_query = """
         INSERT INTO feedback (Feedback_ID, Name, Date, Feedback_contents, TrainID) VALUES (%s, %s, %s, %s, %s)
         """
@@ -201,54 +201,99 @@ def get_feedback_info():
         print(f"Error during feedback information entry: {e}")
         return None
 
+def get_fare_amount(fare_id):
+    # 운임 정보 조회 (실제 데이터베이스 연동이 필요)
+    get_fare_query = """
+    SELECT Fare
+    FROM Fare
+    WHERE FareID = %s
+    """
+    db_cursor.execute(get_fare_query, (fare_id,))
+    return db_cursor.fetchone()[0]
+
+def get_promotion_amount(promotion_id):
+    # 프로모션 정보 조회 (실제 데이터베이스 연동이 필요)
+    get_promotion_query = """
+    SELECT PromotionAmount
+    FROM Promotion
+    WHERE PromotionID = %s
+    """
+    db_cursor.execute(get_promotion_query, (promotion_id,))
+    return db_cursor.fetchone()[0]
+
+def get_point_payment_amount(point_payment_id):
+    # 포인트 정보 조회 (실제 데이터베이스 연동이 필요)
+    get_point_payment_query = """
+    SELECT PointsUsed
+    FROM PointPay
+    WHERE PointPaymentID = %s
+    """
+    db_cursor.execute(get_point_payment_query, (point_payment_id,))
+    return db_cursor.fetchone()[0]
+
+def update_seat_status(train_id, carriage_num, seat_num, time_id):
+    # 좌석 테이블 업데이트 (이 코드는 실제로 좌석을 마킹하는 방법에 따라 수정되어야 합니다)
+    update_seat_query = """
+    UPDATE Seat
+    SET IsOccupied = 1
+    WHERE TrainID = %s AND CarriageNum = %s AND SeatNum = %s AND TimeID = %s
+    """
+    seat_values = (train_id, carriage_num, seat_num, time_id)
+    db_cursor.execute(update_seat_query, seat_values)
+    db_connection.commit()
+
+def insert_service_payment(payment_id, service_id):
+    # Service_Payment 테이블에 삽입
+    insert_service_payment_query = """
+    INSERT INTO Service_Payment (PaymentID, ServiceID)
+    VALUES (%s, %s)
+    """
+    service_payment_values = (payment_id, service_id)
+    db_cursor.execute(insert_service_payment_query, service_payment_values)
+    db_connection.commit()
+
 def make_payment(passenger_id, train_id, carriage_num, seat_num, time_id, route_id, fare_id, promotion_id=None,
                  point_payment_id=None, service_id=None):
     try:
-        # Insert into Payment table
+        fare_amount = get_fare_amount(fare_id)
+        promotion_amount = get_promotion_amount(promotion_id)
+        point_amount = get_point_payment_amount(point_payment_id)
+
+        # 결제 정보 계산
+        total_amount = fare_amount - promotion_amount - point_amount
+
+        # Payment 테이블에 삽입
         insert_payment_query = """
-        INSERT INTO Payment (TrainID, CarriageNum, SeatNum, TimeID, PassengerID, RouteID, FareID, PromotionID, PointPaymentID)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO Payment (TrainID, CarriageNum, SeatNum, TimeID, PassengerID, RouteID, FareID, PromotionID, PointPaymentID, TotalAmount)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         payment_values = (
-            train_id, carriage_num, seat_num, time_id, passenger_id, route_id, fare_id, promotion_id, point_payment_id)
+            train_id, carriage_num, seat_num, time_id, passenger_id, route_id, fare_id, promotion_id, point_payment_id, total_amount
+        )
         db_cursor.execute(insert_payment_query, payment_values)
         db_connection.commit()
 
-        payment_id = db_cursor.lastrowid  # Get the auto-incremented PaymentID
+        payment_id = db_cursor.lastrowid  # 자동 증가하는 PaymentID 반환
 
-        # Update Seat table to mark the seat as occupied
-        update_seat_query = """
-        UPDATE Seat
-        WHERE TrainID = %s AND CarriageNum = %s AND SeatNum = %s AND TimeID = %s
-        """
-        seat_values = (train_id, carriage_num, seat_num, time_id)
-        db_cursor.execute(update_seat_query, seat_values)
-        db_connection.commit()
+        update_seat_status(train_id, carriage_num, seat_num, time_id)
 
         if service_id is not None:
-            # Insert into Service_Payment table
-            insert_service_payment_query = """
-            INSERT INTO Service_Payment (PaymentID, ServiceID)
-            VALUES (%s, %s)
-            """
-            service_payment_values = (payment_id, service_id)
-            db_cursor.execute(insert_service_payment_query, service_payment_values)
-            db_connection.commit()
+            insert_service_payment(payment_id, service_id)
 
-        print(f"Payment successful. PaymentID: {payment_id}")
+        print(f"결제가 성공적으로 완료되었습니다. PaymentID: {payment_id}, 총액: {total_amount}")
 
-        # Ask if the passenger wants to request a refund
-        refund_choice = input("Do you want to request a refund? (y/n): ").lower()
+        # 승객이 환불을 요청할지 물어봅니다.
+        refund_choice = input("환불을 요청하시겠습니까? (y/n): ").lower()
         if refund_choice == 'y':
             complete_refund(payment_id)
 
     except Exception as e:
         db_connection.rollback()
-        print(f"Error during payment: {e}")
+        print(f"결제 중 오류 발생: {e}")
 
 def complete_refund(payment_id):
     try:
-        # Insert into Refund table
+        # 환불 테이블에 삽입
         insert_refund_query = """
         INSERT INTO Refund (PaymentID)
         VALUES (%s)
@@ -280,18 +325,16 @@ try:
             carriage_num, seat_num = get_seat_info(train_id, travel_date)
 
             if carriage_num is not None and seat_num is not None:
-                # Additional information such as fare, promotion, and point payment can be added
-                # For simplicity, I'm using placeholders here
                 make_payment(passenger_id, train_id, carriage_num, seat_num, None, route_id, None, None, None)
 
                 service_id = get_service_info()
 
                 if service_id is not None:
-                    # Complete the payment including the selected service
+                    # 선택한 서비스를 포함하여 결제 완료
                     make_payment(passenger_id, train_id, carriage_num, seat_num, None, route_id, None, None, None,
                                  service_id)
 
-                    # User prompted for refund
+                    # 사용자에게 환불 요청 메시지가 표시됨
                     refund_choice = input("Do you want to request a refund? (y/n): ").lower()
                     if refund_choice == 'y':
                         payment_id = int(input("Enter PaymentID to refund: "))
