@@ -1,4 +1,6 @@
 import mysql.connector
+import itertools
+import heapq
 from datetime import datetime
 
 
@@ -10,9 +12,84 @@ db_connection = mysql.connector.connect(
     database="train"
 )
 
-# 커서 생성
-db_cursor = db_connection.cursor()
+def create_graph(db_cursor):
+    graph = {}
+    db_cursor.execute("SELECT StartID, EndID FROM DetailedRoute")
+    for start_id, end_id in db_cursor:
+        graph.setdefault(start_id, []).append(end_id)
+        graph.setdefault(end_id, []).append(start_id)
+    return graph
 
+def find_shortest_path(graph, start, end):
+    queue = [(0, start, [])]
+    visited = set()
+    while queue:
+        (cost, node, path) = heapq.heappop(queue)
+        if node not in visited:
+            visited.add(node)
+            path = path + [node]
+
+            if node == end:
+                return path
+
+            for next_node in graph.get(node, []):
+                if next_node not in visited:
+                    heapq.heappush(queue, (cost + 1, next_node, path))
+    return []
+
+def create_routes_and_connections(db_connection):
+    try:
+        db_cursor = db_connection.cursor(buffered=True)
+
+        # 그래프 생성
+        graph = create_graph(db_cursor)
+
+        # 모든 역의 ID 가져오기
+        db_cursor.execute("SELECT StationID FROM Station ORDER BY StationID")
+        all_stations = [station[0] for station in db_cursor]
+
+        # 모든 가능한 Route 및 Connected_Route 생성
+        for start_id, end_id in itertools.permutations(all_stations, 2):
+            shortest_path = find_shortest_path(graph, start_id, end_id)
+            if shortest_path:
+                route_id = int(f"{start_id:02d}{end_id:02d}")
+
+                # Route 테이블에 경로 추가
+                insert_route_query = "INSERT IGNORE INTO Route (RouteID, StartID, EndID) VALUES (%s, %s, %s)"
+                db_cursor.execute(insert_route_query, (route_id, start_id, end_id))
+
+                # Connected_Route에 상세 경로 추가
+                for num, node in enumerate(shortest_path[:-1], start=1):
+                    detailed_route_id_query = """
+                        SELECT DetaliedRouteID FROM DetailedRoute
+                        WHERE StartID = %s AND EndID = %s
+                    """
+                    db_cursor.execute(detailed_route_id_query, (node, shortest_path[num]))
+                    result = db_cursor.fetchone()
+                    if result:
+                        detailed_route_id = result[0]
+
+                        insert_connected_route_query = """
+                            INSERT INTO Connected_Route (RouteID, num, DetaliedRouteID)
+                            VALUES (%s, %s, %s)
+                        """
+                        db_cursor.execute(insert_connected_route_query, (route_id, num, detailed_route_id))
+                    else:
+                        print(f"No detailed route found for StartID {node} and EndID {shortest_path[num]}")
+
+        db_connection.commit()
+        print("모든 최단 경로가 성공적으로 생성되었습니다.")
+
+    except mysql.connector.Error as error:
+        print(f"데이터 생성 중 오류 발생: {error}")
+        db_connection.rollback()
+
+    finally:
+        if db_cursor:
+            db_cursor.close()
+
+create_routes_and_connections(db_connection)
+db_cursor = db_connection.cursor()
 def get_passenger_info():
     try:
         print("승객 정보 입력:")
@@ -308,7 +385,64 @@ def complete_refund(payment_id):
         db_connection.rollback()
         print(f"환불중 오류 발생: {e}")
 
+def login():
+    username = input("사용자 이름을 입력하세요: ")
+    return username
 
+def main():
+    while True:
+        user = login()
+
+        while user == "user":
+            userid = input("사용자 번호를 입력하세요: ")
+            print("1. Payment\n"
+                  "2. Refund\n"
+                  "3. Timetable\n"
+                  "4. Seat\n"
+                  "5. user information"
+                  "0. Logout")
+            choice = input("원하는 옵션의 숫자를 입력하세요: ")
+
+            if choice == '1':
+                payment()
+            elif choice == '2':
+                refund()
+            elif choice == '3':
+                timetable()
+            elif choice == '4':
+                seat()
+            elif choice == '5':
+                user_information()
+            elif choice == '0':
+                break
+            else:
+                print("잘못된 입력입니다.")
+
+        while user == "admin":
+            print("1. Time Table Edit\n"
+                  "2. Promotion Edit\n"
+                  "3. Train Edit\n"
+                  "0. Logout")
+            choice = input("원하는 옵션의 숫자를 입력하세요: ")
+
+            if choice == '1':
+                time_table_edit()
+            elif choice == '2':
+                promotion_edit()
+            elif choice == '3':
+                train_edit()
+            elif choice == '0':
+                break
+            else:
+                print("잘못된 입력입니다.")
+
+        if user not in ["user", "admin"]:
+            print("잘못된 사용자 이름입니다.")
+
+if __name__ == "__main__":
+    main()
+
+"""
 try:
     passenger_id = int(input("승객 ID 입력: "))
 
@@ -348,3 +482,4 @@ finally:
     # MySQL 연결 종료
     db_cursor.close()
     db_connection.close()
+    """
